@@ -1,0 +1,8 @@
+name = "optimizer"
+type = "webpack"
+account_id = "d23423cc1d5bd44271dba1eeadd89fb7"
+workers_dev = true
+route = ""
+zone_id = ""
+webpack_config = "webpack.config.js"
+vars = { ENVIRONMENT = "production" }
