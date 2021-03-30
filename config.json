@@ -1,0 +1,4 @@
+{
+  "from": "optimizer.ampdev.workers.dev",
+  "to": "amp.dev"
+}

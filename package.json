@@ -10,6 +10,10 @@
   "author": "Jake Fried <samouri@users.noreply.github.com>",
   "license": "MIT",
   "devDependencies": {
-    "prettier": "1.18.2"
+    "@ampproject/toolbox-optimizer": "^2.7.6",
+    "jimp": "^0.16.1",
+    "lru-cache": "^6.0.0",
+    "prettier": "1.18.2",
+    "probe-image-size": "^7.0.1"
   }
 }
