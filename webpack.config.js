@@ -12,4 +12,8 @@ module.exports = {
   // necessary for cloudflare worker to be secure since dev mode uses eval()
   mode: 'production',
   devtool: 'none',
+  externals: {
+    'jimp': 'jimp',
+    'probe-image-size': 'probe-image-size',
+  }
 }
