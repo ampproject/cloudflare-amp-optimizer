@@ -5,25 +5,24 @@ const linkRewriter = new HTMLRewriter().on('a', new LinkRewriter(config))
 const isReverseProxy = !config.domain
 
 // Ensure config is valid
-if (config.from || config.to) {
+if (isReverseProxy) {
   if (!config.from || !config.to) {
     throw new Error(
-      `If using Cloudflare Worker as your primary domain, you must provide both a "from" and "to" address in optimizer-config.js`,
+      `If using amp-cloudflare-worker as a reverse proxy, you must provide both a "from" and "to" address in the config.json.`,
     )
   }
-}
-if (config.domain) {
+} else {
   if (config.from || config.to) {
     throw new Error(
-      `If using Cloudflare Worker as a route interceptor, "from" and "to" are unnecessary. Please delete them from optimizer-config.js`,
+      `If using amp-cloudflare-worker as an interceptor, "from" and "to" should be removed from config.json.`,
     )
   }
 }
 
 /**
- * 1. minify:false is necessary to speed up the AmpOptimizer. terser also cannot be used since dynamic eval() is part of terser and banned by CloudflareWorkers.
+ * 1. cache set to false, s.t. it doesn't try to write to fs.
+ * 2. minify:false is necessary to speed up the AmpOptimizer. terser also cannot be used since dynamic eval() is part of terser and banned by CloudflareWorkers.
  *    see the webpack.config.js for how we disable the terser module.
- * 2. cache set to false, s.t. it doesn't try to write to fs.
  * 3. fetch is set to Cloudflare Worker provided fetch, with high caching to amortize startup time for each AmpOptimizer instance.
  */
 const ampOptimizer = AmpOptimizer.create({
