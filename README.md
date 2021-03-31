@@ -9,7 +9,7 @@ See it in action at https://optimizer.ampdev.workers.dev/
 1. Create your own Cloudflare Worker Repo using this as a template.
 
 ```bash
-wrangler generate my-worker  https://github.com/ampproject/cloudflare-optimizer
+npx wrangler generate my-worker  https://github.com/ampproject/cloudflare-optimizer
 ```
 
 2. Customize the configuration at `config.json` to point to your domain name.
@@ -21,7 +21,7 @@ wrangler generate my-worker  https://github.com/ampproject/cloudflare-optimizer
 3. Publish!
 
 ```bash
-wrangler publish
+npx wrangler publish
 ```
 
 ### Usage as a reverse proxy
