@@ -1,23 +1,13 @@
 const AmpOptimizer = require('@ampproject/toolbox-optimizer')
-const config = require('../config.json')
 const LinkRewriter = require('./link-rewriter')
-const linkRewriter = new HTMLRewriter().on('a', new LinkRewriter(config))
-const isReverseProxy = !config.domain
+const config = require('../config.json')
 
-// Ensure config is valid
-if (isReverseProxy) {
-  if (!config.from || !config.to) {
-    throw new Error(
-      `If using amp-cloudflare-worker as a reverse proxy, you must provide both a "from" and "to" address in the config.json.`,
-    )
-  }
-} else {
-  if (config.from || config.to) {
-    throw new Error(
-      `If using amp-cloudflare-worker as an interceptor, "from" and "to" should be removed from config.json.`,
-    )
-  }
-}
+/**
+ * Configuration typedef.
+ * @typedef {{from: string, to: string, domain: string} ConfigDef
+ */
+
+validateConfiguration(config)
 
 /**
  * 1. cache set to false, s.t. it doesn't try to write to fs.
@@ -40,7 +30,7 @@ const ampOptimizer = AmpOptimizer.create({
 
 async function handleRequest(request) {
   const url = new URL(request.url)
-  if (config.to && (!config.from || url.hostname === config.from)) {
+  if (isReverseProxy(config)) {
     url.hostname = config.to
   }
 
@@ -65,10 +55,7 @@ async function handleRequest(request) {
     // TODO: use cache for storing transformed result.
     const transformed = await ampOptimizer.transformHtml(responseText)
     const r = new Response(transformed, { headers, statusText, status })
-    if (isReverseProxy) {
-      return linkRewriter.transform(r)
-    }
-    return r
+    return maybeRewriteLinks(r, config)
   } catch (err) {
     console.error(`Failed to optimize: ${url.toString()}, with Error; ${err}`)
     return clonedResponse
@@ -79,3 +66,41 @@ addEventListener('fetch', event => {
   event.passThroughOnException()
   return event.respondWith(handleRequest(event.request))
 })
+
+/**
+ * @param {!Response} response
+ * @param {!ConfigDef} config
+ * @returns {!Response}
+ */
+function maybeRewriteLinks(response, config) {
+  if (!isReverseProxy(config)) {
+    return response
+  }
+  const linkRewriter = new HTMLRewriter().on('a', new LinkRewriter(config))
+  return linkRewriter.transform(response)
+}
+
+/**
+ * @param {ConfigDef} config
+ * @returns {boolean}
+ */
+function isReverseProxy(config) {
+  return !config.domain
+}
+
+/** @param {!ConfigDef} config */
+function validateConfiguration(config) {
+  if (isReverseProxy) {
+    if (!config.from || !config.to) {
+      throw new Error(
+        `If using amp-cloudflare-worker as a reverse proxy, you must provide both a "from" and "to" address in the config.json.`,
+      )
+    }
+  } else {
+    if (config.from || config.to) {
+      throw new Error(
+        `If using amp-cloudflare-worker as an interceptor, "from" and "to" should be removed from config.json.`,
+      )
+    }
+  }
+}
