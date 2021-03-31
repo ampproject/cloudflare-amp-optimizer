@@ -26,6 +26,7 @@ const ampOptimizer = AmpOptimizer.create({
         cacheTtl: 60 * 60 * 6, // 6 hours
       },
     }),
+  transformations: AmpOptimizer.TRANSFORMATIONS_MINIMAL,
 })
 
 async function handleRequest(request) {
@@ -45,6 +46,9 @@ async function handleRequest(request) {
   const responseText =
     headers.get('content-type').includes('text/html') && (await response.text())
   const isHtml = responseText && responseText.startsWith('<')
+
+  // TODO: Also check if the HTML has the lightning bolt or "amp" text.
+  const isAmp = isHtml && true
 
   // If not HTML then return original response unchanged.
   if (!isHtml) {
