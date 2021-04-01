@@ -43,15 +43,13 @@ async function handleRequest(request) {
   // Turns out that content-type lies ~25% of the time.
   // Therefore we use starting with `<` as a heuristic as well.
   // See: https://blog.cloudflare.com/html-parsing-1/
-  const responseText =
-    headers.get('content-type').includes('text/html') && (await response.text())
-  const isHtml = responseText && responseText.startsWith('<')
+  if (!headers.get('content-type').includes('text/html')) {
+    return clonedResponse
+  }
 
-  // TODO: Also check if the HTML has the lightning bolt or "amp" text.
-  const isAmp = isHtml && true
-
-  // If not HTML then return original response unchanged.
-  if (!isHtml) {
+  const responseText = await response.text()
+  const isAmpHtml = responseText.startsWith('<') && isAmp(responseText)
+  if (!isAmpHtml) {
     return clonedResponse
   }
 
@@ -82,6 +80,14 @@ function maybeRewriteLinks(response, config) {
   }
   const linkRewriter = new HTMLRewriter().on('a', new LinkRewriter(config))
   return linkRewriter.transform(response)
+}
+
+/**
+ * @param {string} html
+ * @returns {boolean}
+ */
+function isAmp(html) {
+  return /<html\s[^>]*(⚡|amp)[^>]*>/.test(html)
 }
 
 /**
