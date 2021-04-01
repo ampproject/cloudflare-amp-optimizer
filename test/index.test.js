@@ -1,11 +1,8 @@
-const { beforeEach, expect } = require('@jest/globals')
+const { beforeEach, expect, it } = require('@jest/globals')
 const AmpOptimizer = require('@ampproject/toolbox-optimizer')
+const { handleRequest } = require('../src/index')
+const { describe } = require('yargs')
 
-// const transformHtmlSpy = jest.fn(input => `transformed-${input}`);
-// const createAmpOptimizerSpy = jest.fn(() => ({
-//     transformHtml: transformHtmlSpy,
-// }));
-// return { create: createAmpOptimizerSpy}
 jest.mock('@ampproject/toolbox-optimizer', () => {
   const transformHtmlSpy = jest.fn(input => `transformed-${input}`)
   return {
@@ -13,8 +10,6 @@ jest.mock('@ampproject/toolbox-optimizer', () => {
     transformHtmlSpy,
   }
 })
-
-const { handleRequest } = require('../src/index')
 
 const REVERSE_PROXY_CONFIG = {
   from: 'example-origin.com',
@@ -29,40 +24,50 @@ beforeEach(() => {
   global.HTMLRewriter = HTMLRewriter
 })
 
-it('Should ignore non HTML documents', async () => {
-  const input = `<html amp><body><a href="">link</a></body></html>`
-  const incomingResponse = getResponse({ html: input, isHtml: false })
-  global.fetch.mockReturnValue(incomingResponse)
+describe('handleRequest', () => {
+  it('Should ignore non HTML documents', async () => {
+    const input = `<html amp><body><a href="">link</a></body></html>`
+    const incomingResponse = getResponse({ html: input, isHtml: false })
+    global.fetch.mockReturnValue(incomingResponse)
 
-  const outgoingResponse = handleRequest(
-    { url: 'http://test.com' },
-    REVERSE_PROXY_CONFIG,
-  )
-  const output = await (await outgoingResponse).text()
-  expect(output).toBe(input)
+    const outgoingResponse = handleRequest(
+      { url: 'http://test.com' },
+      REVERSE_PROXY_CONFIG,
+    )
+    const output = await (await outgoingResponse).text()
+    expect(output).toBe(input)
+  })
+
+  it('Should ignore non-AMP HTML documents', () => {
+    const html = `<html><body><a href="">link</a></body></html>`
+    const response = getResponse({ html, isHtml: true })
+    global.fetch.mockReturnValue(response)
+    handleRequest({ url: 'http://test.com' }, REVERSE_PROXY_CONFIG)
+  })
+
+  it('Should transform AMP HTML documents', async () => {
+    const input = `<html amp><body><a href="">link</a></body></html>`
+    const incomingResponse = getResponse({ html: input, isHtml: true })
+    global.fetch.mockReturnValue(incomingResponse)
+
+    const outgoingResponse = handleRequest(
+      { url: 'http://test.com' },
+      REVERSE_PROXY_CONFIG,
+    )
+    const output = await (await outgoingResponse).text()
+    expect(output).toBe(`transformed-${input}`)
+  })
+
+  it.todo('Should modify request url for reverse-proxy')
+  it.todo('Should rewrite all links for reverse-proxy')
 })
 
-it('Should ignore non AMP HTML documents', () => {
-  const html = `<html><body><a href="">link</a></body></html>`
-  const response = getResponse({ html, isHtml: true })
-  global.fetch.mockReturnValue(response)
-  handleRequest({ url: 'http://test.com' }, REVERSE_PROXY_CONFIG)
+describe('validateConfig', () => {
+    it.todo('Should throw unless {to,from} or {domain} are present');
+    it.todo('Should throw if both {to,from} and {domain} are present');
+    it.todo('Should throw if unknown keys are present');
+    it.todo('Should accept valid configurations');
 })
-
-it('Should transform AMP HTML documents', async () => {
-  const input = `<html amp><body><a href="">link</a></body></html>`
-  const incomingResponse = getResponse({ html: input, isHtml: true })
-  global.fetch.mockReturnValue(incomingResponse)
-
-  const outgoingResponse = handleRequest(
-    { url: 'http://test.com' },
-    REVERSE_PROXY_CONFIG,
-  )
-  const output = await (await outgoingResponse).text()
-  expect(output).toBe(`transformed-${input}`)
-})
-
-
 class Response {
   constructor(text, { headers, status, statusText }) {
     this.syncText = text
