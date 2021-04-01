@@ -63,10 +63,14 @@ describe('handleRequest', () => {
 })
 
 describe('validateConfig', () => {
-    it.todo('Should throw unless {to,from} or {domain} are present');
-    it.todo('Should throw if both {to,from} and {domain} are present');
-    it.todo('Should throw if unknown keys are present');
-    it.todo('Should accept valid configurations');
+  it.todo('Should throw unless {to,from} or {domain} are present')
+  it.todo('Should throw if both {to,from} and {domain} are present')
+  it.todo('Should throw if unknown keys are present')
+  it.todo('Should accept valid configurations')
+})
+
+describe('getAmpOptimizer', () => {
+  it.todo('Should pass through options from configuration.')
 })
 class Response {
   constructor(text, { headers, status, statusText }) {
