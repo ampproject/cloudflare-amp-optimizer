@@ -7,7 +7,9 @@ const config = require('../config.json')
  * @typedef {{from: string, to: string, domain: string} ConfigDef
  */
 
-validateConfiguration(config)
+if (process.env.NODE_ENV !== 'test') {
+  validateConfiguration(config)
+}
 
 /**
  * 1. cache set to false, s.t. it doesn't try to write to fs.
@@ -29,7 +31,7 @@ const ampOptimizer = AmpOptimizer.create({
   transformations: AmpOptimizer.TRANSFORMATIONS_MINIMAL,
 })
 
-async function handleRequest(request) {
+async function handleRequest(request, config = config) {
   const url = new URL(request.url)
   if (isReverseProxy(config)) {
     url.hostname = config.to
@@ -40,16 +42,14 @@ async function handleRequest(request) {
   const clonedResponse = response.clone()
   const { headers, status, statusText } = response
 
-  // Turns out that content-type lies ~25% of the time.
-  // Therefore we use starting with `<` as a heuristic as well.
+  // Note: it turns out that content-type lies ~25% of the time.
   // See: https://blog.cloudflare.com/html-parsing-1/
   if (!headers.get('content-type').includes('text/html')) {
     return clonedResponse
   }
 
   const responseText = await response.text()
-  const isAmpHtml = responseText.startsWith('<') && isAmp(responseText)
-  if (!isAmpHtml) {
+  if (!isAmp(responseText)) {
     return clonedResponse
   }
 
@@ -66,7 +66,7 @@ async function handleRequest(request) {
 
 addEventListener('fetch', event => {
   event.passThroughOnException()
-  return event.respondWith(handleRequest(event.request))
+  return event.respondWith(handleRequest(event.request, config))
 })
 
 /**
@@ -113,4 +113,8 @@ function validateConfiguration(config) {
       )
     }
   }
+}
+
+module.exports = {
+  handleRequest,
 }
