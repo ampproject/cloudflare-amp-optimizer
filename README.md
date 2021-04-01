@@ -34,3 +34,19 @@ module.export = {
   to: 'YOUR_SERVER_IP', // Provide the URL of the origin to proxy to.
 }
 ```
+
+### Enabling image optimization
+
+If you are a Business or Enterprise customer of Cloudflare, you may enable [Cloudflare Image Optimizations](https://developers.cloudflare.com/images/url-format). Just add `enableCloudflareImageOptimization: true` to the `config.json` file and images will automatically resized and optimized for multiple surfaces.
+
+### Passing configuration options to AMP Optimizer
+
+Under the hood, `amp-cloudflare-worker` utilizes the [AMP Optimizer](https://github.com/ampproject/amp-toolbox/tree/main/packages/optimizer#options) library. If you'd like to pass through configuration options to the underlying library, you may do so by adding it to the `optimizer` key within `config.json`. For example, to increase the hero image count from 2 to 5:
+
+```json
+{
+  "optimizer": {
+    "maxHeroImageCount": 5
+  }
+}
+```
