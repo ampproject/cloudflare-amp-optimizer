@@ -5,7 +5,7 @@
   "main": "./src/index.js",
   "scripts": {
     "test": "jest --coverage",
-    "format": "prettier --write 'src/*.{js,css,json,md}'"
+    "format": "prettier --write '{src,test}/*.{js,css,json,md}'"
   },
   "jest": {
     "collectCoverageFrom": [
