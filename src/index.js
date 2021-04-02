@@ -100,7 +100,14 @@ function isReverseProxy(config) {
 
 /** @param {!ConfigDef} config */
 function validateConfiguration(config) {
-  if (isReverseProxy) {
+  const allowed = new Set(['from', 'to', 'domain'])
+  Object.keys(config).forEach(key => {
+    if (!allowed.has(key)) {
+      throw new Error(`Unknown key "${key}" found in configuration.`)
+    }
+  })
+
+  if (isReverseProxy(config)) {
     if (!config.from || !config.to) {
       throw new Error(
         `If using amp-cloudflare-worker as a reverse proxy, you must provide both a "from" and "to" address in the config.json.`,
@@ -117,4 +124,5 @@ function validateConfiguration(config) {
 
 module.exports = {
   handleRequest,
+  validateConfiguration,
 }

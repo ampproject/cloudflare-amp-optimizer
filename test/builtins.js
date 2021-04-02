@@ -25,3 +25,5 @@ class HTMLRewriter {
     return r
   }
 }
+
+module.exports = { Response, HTMLRewriter }
