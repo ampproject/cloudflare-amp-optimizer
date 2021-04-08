@@ -15,8 +15,11 @@ class LinkRewriter {
   element(element) {
     const { to, from } = this.config
     const href = element.getAttribute('href')
-    if (ENVIRONMENT === 'dev') {
-      element.setAttribute('href', href.replace(to, 'localhost'))
+    if (MODE === 'dev') {
+      element.setAttribute(
+        'href',
+        href.replace(to, 'localhost:8787').replace('https://', 'http://'),
+      )
       return
     }
     element.setAttribute('href', href.replace(to, from))
