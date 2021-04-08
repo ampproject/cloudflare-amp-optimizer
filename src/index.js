@@ -35,7 +35,8 @@ async function handleRequest(request, config = config) {
 
   // Immediately return if not GET.
   if (request.method !== 'GET') {
-    return fetch(url.toString())
+    request.url = url
+    return fetch(request)
   }
 
   const response = await fetch(url.toString(), { minify: { html: true } })
