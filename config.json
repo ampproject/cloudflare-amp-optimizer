@@ -3,5 +3,6 @@
   "to": "amp.dev",
   "optimizer": {
     "maxHeroImageCount": 5
-  }
+  },
+  "kvCaching": true
 }

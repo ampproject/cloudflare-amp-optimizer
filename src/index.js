@@ -12,6 +12,7 @@ config.MODE = process.env.NODE_ENV === 'test' ? 'test' : MODE
  *  optimizer: Object,
  *  enableCloudflareImageOptimization: boolean,
  *  MODE: string,
+ *  kvCaching: boolean,
  * }} ConfigDef
  */
 
@@ -29,6 +30,7 @@ addEventListener('fetch', event => {
  */
 async function handleRequest(request, config = config) {
   const url = new URL(request.url)
+  //TODO:// We can return immediately if it is not a GET right?
   if (isReverseProxy(config)) {
     url.hostname = config.to
   }
@@ -40,6 +42,18 @@ async function handleRequest(request, config = config) {
   }
 
   const response = await fetch(url.toString(), { minify: { html: true } })
+  if (config.kvCaching) {
+    const cached = await KV.get(request.url)
+    if (cached) {
+      const { status, statusText, headers, transformed } = JSON.parse(cached)
+      const r = new Response(transformed, { status, statusText, headers })
+      // TODO: is there any way to put the rewritten Response object in KV Store?
+      // it is suboptimal to keep rewriting links and adding the tracker tag.
+      return addTag(maybeRewriteLinks(r, config))
+    }
+  }
+
+  const response = await fetch(url.toString())
   const clonedResponse = response.clone()
   const { headers, status, statusText } = response
 
@@ -55,8 +69,26 @@ async function handleRequest(request, config = config) {
   }
 
   try {
-    // TODO: use cache for storing transformed result.
     const transformed = await ampOptimizer.transformHtml(responseText)
+
+    //TODO: Need to wrap this in a promise and set it on event.waitUntil()
+    //TODO: Do this in a nextTick()/setTimeout()
+    //TODO: if HTMLRewriting is needed, clone the response, do the rewriting, then response.text() again.
+    if (config.kvCaching) {
+      KV.put(
+        request.url,
+        JSON.stringify({
+          transformed,
+          headers: Array.from(headers.entries()),
+          statusText,
+          status,
+        }),
+        {
+          expirationTtl: 60 * 60, //TODO: Match the cache time with the Response.
+        },
+      )
+    }
+
     const r = new Response(transformed, { headers, statusText, status })
     return addTag(maybeRewriteLinks(r, config))
   } catch (err) {
@@ -115,6 +147,7 @@ function validateConfiguration(config) {
     'optimizer',
     'enableCloudflareImageResizing',
     'MODE',
+    'kvCaching',
   ])
   Object.keys(config).forEach(key => {
     if (!allowed.has(key)) {
@@ -158,8 +191,7 @@ function getOptimizer(config) {
       fetch(url, {
         ...init,
         cf: {
-          cacheEverything: true,
-          cacheTtl: 60 * 60 * 6, // 6 hours
+          minify: { html: true },
         },
       }),
     transformations: AmpOptimizer.TRANSFORMATIONS_MINIMAL,
