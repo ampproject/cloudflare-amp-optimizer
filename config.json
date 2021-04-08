@@ -4,5 +4,5 @@
   "optimizer": {
     "maxHeroImageCount": 5
   },
-  "kvCaching": true
+  "enableKVCache": true
 }

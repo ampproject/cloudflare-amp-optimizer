@@ -13,8 +13,8 @@ const CACHE_TIME = 60 * 60 // TODO: how should we actually set TTLs?
  *  domain: string,
  *  optimizer: Object,
  *  enableCloudflareImageOptimization: boolean,
+ *  enableKVCache: boolean,
  *  MODE: string,
- *  kvCaching: boolean,
  * }} ConfigDef
  */
 
@@ -43,7 +43,7 @@ async function handleRequest(request, config = config, event) {
     return fetch(request)
   }
 
-  if (config.kvCaching) {
+  if (config.enableKVCache) {
     const cached = await KV.get(request.url)
     if (cached) {
       // TODO: can we do something faster than JSON.parse?
@@ -78,7 +78,7 @@ async function handleRequest(request, config = config, event) {
     const response = new Response(transformed, { headers, statusText, status })
     const rewritten = addTag(maybeRewriteLinks(response, config))
 
-    if (config.kvCaching) {
+    if (config.enableKVCache) {
       event.waitUntil(storeResponse(request.url, rewritten.clone()))
     }
     return rewritten
@@ -166,7 +166,7 @@ function validateConfiguration(config) {
     'optimizer',
     'enableCloudflareImageResizing',
     'MODE',
-    'kvCaching',
+    'enableKVCache',
   ])
   Object.keys(config).forEach(key => {
     if (!allowed.has(key)) {
