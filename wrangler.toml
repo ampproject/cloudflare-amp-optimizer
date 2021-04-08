@@ -9,3 +9,7 @@ vars = { MODE = "production" }
 
 [env.dev]
 vars = { MODE = "dev" }
+
+[env.beta]
+name = "optimizer-beta"
+vars = { MODE = "beta" }

@@ -1,6 +1,7 @@
 const AmpOptimizer = require('@ampproject/toolbox-optimizer')
-const LinkRewriter = require('./link-rewriter')
+const { DocTagger, LinkRewriter } = require('./rewriters')
 const config = /** @type {ConfigDef} */ (require('../config.json'))
+config.MODE = process.env.NODE_ENV === 'test' ? 'test' : MODE
 
 /**
  * Configuration typedef.
@@ -10,17 +11,16 @@ const config = /** @type {ConfigDef} */ (require('../config.json'))
  *  domain: string,
  *  optimizer: Object,
  *  enableCloudflareImageOptimization: boolean,
+ *  MODE: string,
  * }} ConfigDef
  */
 
 const ampOptimizer = getOptimizer(config)
-if (process.env.NODE_ENV !== 'test') {
-  validateConfiguration(config)
-  addEventListener('fetch', event => {
-    event.passThroughOnException()
-    return event.respondWith(handleRequest(event.request, config))
-  })
-}
+validateConfiguration(config)
+addEventListener('fetch', event => {
+  event.passThroughOnException()
+  return event.respondWith(handleRequest(event.request, config))
+})
 
 /**
  * @param {!Request} request
@@ -33,8 +33,12 @@ async function handleRequest(request, config = config) {
     url.hostname = config.to
   }
 
-  // TODO: add cf fetch cache based on cache-control headers of the response.
-  const response = await fetch(url.toString())
+  // Immediately return if not GET.
+  if (request.method !== 'GET') {
+    return fetch(url.toString())
+  }
+
+  const response = await fetch(url.toString(), { minify: { html: true } })
   const clonedResponse = response.clone()
   const { headers, status, statusText } = response
 
@@ -55,7 +59,9 @@ async function handleRequest(request, config = config) {
     const r = new Response(transformed, { headers, statusText, status })
     return addTag(maybeRewriteLinks(r, config))
   } catch (err) {
-    console.error(`Failed to optimize: ${url.toString()}, with Error; ${err}`)
+    if (config.MODE !== 'test') {
+      console.error(`Failed to optimize: ${url.toString()}, with Error; ${err}`)
+    }
     return clonedResponse
   }
 }
@@ -79,11 +85,7 @@ function maybeRewriteLinks(response, config) {
  * @returns {!Response}
  */
 function addTag(response) {
-  const rewriter = new HTMLRewriter().on('html', {
-    element(el) {
-      el.setAttribute('data-cfw', '')
-    },
-  })
+  const rewriter = new HTMLRewriter().on('html', new DocTagger())
   return rewriter.transform(response)
 }
 
@@ -111,6 +113,7 @@ function validateConfiguration(config) {
     'domain',
     'optimizer',
     'enableCloudflareImageResizing',
+    'MODE',
   ])
   Object.keys(config).forEach(key => {
     if (!allowed.has(key)) {
@@ -144,7 +147,8 @@ function validateConfiguration(config) {
  * @returns {!AmpOptimizer}
  */
 function getOptimizer(config) {
-  const imageOptimizer = (src, width) => `/cdn-cgi/image/width=${width}/${src}`
+  const imageOptimizer = (src, width) =>
+    `/cdn-cgi/image/width=${width},f=auto/${src}`
   return AmpOptimizer.create({
     ...(config.optimizer || {}),
     minify: false,

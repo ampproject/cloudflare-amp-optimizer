@@ -4,10 +4,12 @@
   "description": "A Cloudflare Worker AMP Optimizer",
   "main": "./src/index.js",
   "scripts": {
+    "beta": "wrangler publish --env=beta",
+    "coverage": "jest --coverage && open coverage/lcov-report/index.html",
     "format": "prettier --write '{src,test}/*.{js,css,json,md}'",
     "publish": "wrangler publish",
     "start": "wrangler dev --env=dev",
-    "test": "jest --coverage"
+    "test": "jest"
   },
   "jest": {
     "collectCoverageFrom": [
