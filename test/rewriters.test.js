@@ -30,7 +30,7 @@ describe('Rewriters', () => {
     })
 
     it('Should rewrite to origin', () => {
-      const config = { from: 'test-origin.com', to: 'test-worker.com' }
+      const config = { from: 'test-worker.com', to: 'test-origin.com' }
       new LinkRewriter(config).element(a)
       expect(a.setAttribute).toBeCalledWith(
         'href',

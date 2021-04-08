@@ -22,7 +22,7 @@ class LinkRewriter {
       )
       return
     }
-    element.setAttribute('href', href.replace(to, from))
+    element.setAttribute('href', href.replace(from, to))
   }
 }
 
