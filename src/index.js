@@ -3,6 +3,8 @@ const { DocTagger, LinkRewriter } = require('./rewriters')
 const config = /** @type {ConfigDef} */ (require('../config.json'))
 config.MODE = process.env.NODE_ENV === 'test' ? 'test' : MODE
 
+const CACHE_TIME = 60 * 60 // 1 hour
+
 /**
  * Configuration typedef.
  * @typedef {{
@@ -50,7 +52,10 @@ async function handleRequest(request, config = config, event) {
     }
   }
 
-  const response = await fetch(url.toString(), { minify: { html: true } })
+  const response = await fetch(url.toString(), {
+    minify: { html: true },
+    cf: { cacheTtl: CACHE_TIME, cacheEverything: true },
+  })
   const clonedResponse = response.clone()
   const { headers, status, statusText } = response
 
@@ -105,7 +110,7 @@ async function storeResponse(key, response) {
       status,
     }),
     {
-      expirationTtl: 60 * 60, //TODO: Match the cache time with the Response.
+      expirationTtl: CACHE_TIME, //TODO: Match the cache time with the Response.
     },
   )
 }
