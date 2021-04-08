@@ -53,7 +53,7 @@ async function handleRequest(request, config = config) {
     // TODO: use cache for storing transformed result.
     const transformed = await ampOptimizer.transformHtml(responseText)
     const r = new Response(transformed, { headers, statusText, status })
-    return maybeRewriteLinks(r, config)
+    return addTag(maybeRewriteLinks(r, config))
   } catch (err) {
     console.error(`Failed to optimize: ${url.toString()}, with Error; ${err}`)
     return clonedResponse
@@ -71,6 +71,20 @@ function maybeRewriteLinks(response, config) {
   }
   const linkRewriter = new HTMLRewriter().on('a', new LinkRewriter(config))
   return linkRewriter.transform(response)
+}
+
+/**
+ * Adds `data-cfw` to the html node to mark it as optimized by this package.
+ * @param {!Response} response
+ * @returns {!Response}
+ */
+function addTag(response) {
+  const rewriter = new HTMLRewriter().on('html', {
+    element(el) {
+      el.setAttribute('data-cfw', '')
+    },
+  })
+  return rewriter.transform(response)
 }
 
 /**
