@@ -1,6 +1,10 @@
 const { beforeEach, expect, it, describe } = require('@jest/globals')
 const AmpOptimizer = require('@ampproject/toolbox-optimizer')
-const { handleRequest, validateConfiguration } = require('../src/index')
+const {
+  getOptimizer,
+  handleRequest,
+  validateConfiguration,
+} = require('../src/index')
 const { Response, HTMLRewriter } = require('./builtins')
 
 jest.mock('@ampproject/toolbox-optimizer', () => {
@@ -93,7 +97,35 @@ describe('validateConfig', () => {
 })
 
 describe('getAmpOptimizer', () => {
-  it.todo('Should pass through options from configuration.')
+  it('Should pass through options from configuration.', () => {
+    getOptimizer({ optimizer: { maxHeroImageCount: 42 } })
+    expect(AmpOptimizer.create).toBeCalledWith(
+      expect.objectContaining({
+        maxHeroImageCount: 42,
+      }),
+    )
+  })
+
+  it('Should override specific settings', () => {
+    getOptimizer({ cache: true })
+    expect(AmpOptimizer.create).toBeCalledWith(
+      expect.objectContaining({ cache: false }),
+    )
+  })
+
+  // See https://developers.cloudflare.com/images/url-format.
+  it('Should rewrite images using cloudflare image resizing', () => {
+    getOptimizer({ enableCloudflareImageOptimization: false })
+    expect(AmpOptimizer.create).toBeCalledWith(
+      expect.objectContaining({ imageOptimizer: undefined }),
+    )
+    AmpOptimizer.create.mockClear()
+
+    getOptimizer({ enableCloudflareImageOptimization: true })
+    expect(AmpOptimizer.create).toBeCalledWith(
+      expect.objectContaining({ imageOptimizer: expect.any(Function) }),
+    )
+  })
 })
 
 function getResponse(html, { contentType } = { contentType: 'text/html' }) {

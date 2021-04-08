@@ -1,5 +1,3 @@
 module.exports = {
-    existsSync() {
-        return false;
-    } 
+  existsSync: () => false,
 }

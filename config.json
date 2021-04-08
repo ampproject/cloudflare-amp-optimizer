@@ -1,4 +1,7 @@
 {
   "from": "optimizer.ampdev.workers.dev",
-  "to": "amp.dev"
+  "to": "amp.dev",
+  "optimizer": {
+    "maxHeroImageCount": 5
+  }
 }

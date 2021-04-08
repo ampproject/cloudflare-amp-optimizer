@@ -1,36 +1,32 @@
 const AmpOptimizer = require('@ampproject/toolbox-optimizer')
 const LinkRewriter = require('./link-rewriter')
-const config = require('../config.json')
+const config = /** @type {ConfigDef} */ (require('../config.json'))
 
 /**
  * Configuration typedef.
- * @typedef {{from: string, to: string, domain: string} ConfigDef
+ * @typedef {{
+ *  from: string,
+ *  to: string,
+ *  domain: string,
+ *  optimizer: Object,
+ *  enableCloudflareImageOptimization: boolean,
+ * }} ConfigDef
  */
 
+const ampOptimizer = getOptimizer(config)
 if (process.env.NODE_ENV !== 'test') {
   validateConfiguration(config)
+  addEventListener('fetch', event => {
+    event.passThroughOnException()
+    return event.respondWith(handleRequest(event.request, config))
+  })
 }
 
 /**
- * 1. cache set to false, s.t. it doesn't try to write to fs.
- * 2. minify:false is necessary to speed up the AmpOptimizer. terser also cannot be used since dynamic eval() is part of terser and banned by CloudflareWorkers.
- *    see the webpack.config.js for how we disable the terser module.
- * 3. fetch is set to Cloudflare Worker provided fetch, with high caching to amortize startup time for each AmpOptimizer instance.
+ * @param {!Request} request
+ * @param {!ConfigDef} config
+ * @return {!Request}
  */
-const ampOptimizer = AmpOptimizer.create({
-  minify: false,
-  cache: false,
-  fetch: (url, init) =>
-    fetch(url, {
-      ...init,
-      cf: {
-        cacheEverything: true,
-        cacheTtl: 60 * 60 * 6, // 6 hours
-      },
-    }),
-  transformations: AmpOptimizer.TRANSFORMATIONS_MINIMAL,
-})
-
 async function handleRequest(request, config = config) {
   const url = new URL(request.url)
   if (isReverseProxy(config)) {
@@ -64,11 +60,6 @@ async function handleRequest(request, config = config) {
   }
 }
 
-addEventListener('fetch', event => {
-  event.passThroughOnException()
-  return event.respondWith(handleRequest(event.request, config))
-})
-
 /**
  * @param {!Response} response
  * @param {!ConfigDef} config
@@ -91,7 +82,7 @@ function isAmp(html) {
 }
 
 /**
- * @param {ConfigDef} config
+ * @param {!ConfigDef} config
  * @returns {boolean}
  */
 function isReverseProxy(config) {
@@ -100,7 +91,13 @@ function isReverseProxy(config) {
 
 /** @param {!ConfigDef} config */
 function validateConfiguration(config) {
-  const allowed = new Set(['from', 'to', 'domain'])
+  const allowed = new Set([
+    'from',
+    'to',
+    'domain',
+    'optimizer',
+    'enableCloudflareImageResizing',
+  ])
   Object.keys(config).forEach(key => {
     if (!allowed.has(key)) {
       throw new Error(`Unknown key "${key}" found in configuration.`)
@@ -122,7 +119,39 @@ function validateConfiguration(config) {
   }
 }
 
+/**
+ * Returns an AmpOptimizer for the given configuraion.
+ *
+ * 1. cache set to false, s.t. it doesn't try to write to fs.
+ * 2. minify:false is necessary to speed up the AmpOptimizer. terser also cannot be used since dynamic eval() is part of terser and banned by CloudflareWorkers.
+ *    see the webpack.config.js for how we disable the terser module.
+ * 3. fetch is set to Cloudflare Worker provided fetch, with high caching to amortize startup time for each AmpOptimizer instance.
+ * @param {!ConfigDef} config
+ * @returns {!AmpOptimizer}
+ */
+function getOptimizer(config) {
+  const imageOptimizer = (src, width) => `/cdn-cgi/image/width=${width}/${src}`
+  return AmpOptimizer.create({
+    ...(config.optimizer || {}),
+    minify: false,
+    cache: false,
+    fetch: (url, init) =>
+      fetch(url, {
+        ...init,
+        cf: {
+          cacheEverything: true,
+          cacheTtl: 60 * 60 * 6, // 6 hours
+        },
+      }),
+    transformations: AmpOptimizer.TRANSFORMATIONS_MINIMAL,
+    imageOptimizer: !!config.enableCloudflareImageOptimization
+      ? imageOptimizer
+      : undefined,
+  })
+}
+
 module.exports = {
+  getOptimizer,
   handleRequest,
   validateConfiguration,
 }
