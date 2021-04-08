@@ -1,5 +1,5 @@
 {
-  "name": "cloudflare-optimizer",
+  "name": "@ampproject/cloudflare-amp-optimizer",
   "version": "0.1.0",
   "description": "A Cloudflare Worker AMP Optimizer",
   "main": "./src/index.js",
