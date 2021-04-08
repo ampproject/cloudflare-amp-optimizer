@@ -4,18 +4,18 @@
  */
 
 class LinkRewriter {
+  /**
+   * @param {!../index.js.ConfigDef} config
+   */
   constructor(config) {
-    /** @type {{from?: string, to: string}} */
-    this.config = {
-      from: config.from,
-      to: config.to,
-    }
+    /** @type {../index.js.ConfigDef} */
+    this.config = config
   }
 
   element(element) {
     const { to, from } = this.config
     const href = element.getAttribute('href')
-    if (MODE === 'dev') {
+    if (this.config.MODE === 'dev') {
       element.setAttribute(
         'href',
         href.replace(to, 'localhost:8787').replace('https://', 'http://'),
@@ -26,4 +26,10 @@ class LinkRewriter {
   }
 }
 
-module.exports = LinkRewriter
+class DocTagger {
+  element(el) {
+    el.setAttribute('data-cfw', '')
+  }
+}
+
+module.exports = { LinkRewriter, DocTagger }

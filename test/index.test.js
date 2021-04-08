@@ -8,16 +8,20 @@ const {
 const { Response, HTMLRewriter } = require('./builtins')
 
 jest.mock('@ampproject/toolbox-optimizer', () => {
-  const transformHtmlSpy = jest.fn(input => `transformed-${input}`)
+  const transformHtml = jest.fn()
   return {
-    create: jest.fn(() => ({ transformHtml: transformHtmlSpy })),
-    transformHtmlSpy,
+    create: jest.fn(() => ({ transformHtml })),
+    transformHtmlSpy: transformHtml,
   }
 })
 
 beforeEach(() => {
   global.fetch = jest.fn()
   AmpOptimizer.create.mockClear()
+  AmpOptimizer.transformHtmlSpy.mockReset()
+  AmpOptimizer.transformHtmlSpy.mockImplementation(
+    input => `transformed-${input}`,
+  )
 
   global.Response = Response
   global.HTMLRewriter = HTMLRewriter
@@ -27,8 +31,31 @@ describe('handleRequest', () => {
   const defaultConfig = { domain: 'example.com' }
 
   function getOutput(url, config = defaultConfig) {
-    return handleRequest({ url }, config).then(r => r.text())
+    return handleRequest({ url, method: 'GET' }, config).then(r => r.text())
   }
+
+  it('Should proxy through non GET requests', async () => {
+    const input = `<html amp><body></body></html>`
+    const incomingResponse = getResponse(input)
+    global.fetch.mockReturnValue(incomingResponse)
+
+    const request = { url: 'http://text.com', method: 'POST' }
+    const output = await handleRequest(request, defaultConfig)
+    expect(output).toBe(incomingResponse)
+  })
+
+  it('Should proxy through optimizer failures', async () => {
+    const input = `<html amp><body></body></html>`
+    const incomingResponse = getResponse(input)
+    global.fetch.mockReturnValue(incomingResponse)
+    AmpOptimizer.transformHtmlSpy.mockReturnValue(Promise.reject('Fail.'))
+
+    const output = await getOutput('http://text.com', {
+      ...defaultConfig,
+      MODE: 'test',
+    })
+    expect(output).toBe(input)
+  })
 
   it('Should ignore non HTML documents', async () => {
     const input = `<html amp><body></body></html>`
@@ -39,7 +66,7 @@ describe('handleRequest', () => {
     expect(output).toBe(input)
   })
 
-  it('Should ignore non-AMP HTML documents', async () => {
+  it('Should ignore non AMPHTML documents', async () => {
     const input = `<html><body></body></html>`
     global.fetch.mockReturnValue(getResponse(input))
 
@@ -70,9 +97,6 @@ describe('handleRequest', () => {
     await getOutput('http://test.com', config)
     expect(fetch).toBeCalledWith('http://test-origin.com/')
   })
-
-  // TODO: how best to test HTMLRewriter functionality?
-  it.todo('Should rewrite all links for reverse-proxy')
 })
 
 describe('validateConfig', () => {
@@ -81,7 +105,7 @@ describe('validateConfig', () => {
   })
 
   it('Should throw if both {to,from} and {domain} are present', () => {
-    const config = { to: '', from: '', domain: '' }
+    const config = { to: 'test', from: 'test', domain: 'test' }
     expect(() => validateConfiguration(config)).toThrow()
   })
 
