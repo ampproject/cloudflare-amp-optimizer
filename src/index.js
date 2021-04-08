@@ -3,7 +3,7 @@ const { DocTagger, LinkRewriter } = require('./rewriters')
 const config = /** @type {ConfigDef} */ (require('../config.json'))
 config.MODE = process.env.NODE_ENV === 'test' ? 'test' : MODE
 
-const CACHE_TIME = 60 * 60 // 1 hour
+const CACHE_TIME = 60 * 60 // TODO: how should we actually set TTLs?
 
 /**
  * Configuration typedef.
@@ -53,8 +53,11 @@ async function handleRequest(request, config = config, event) {
   }
 
   const response = await fetch(url.toString(), {
-    minify: { html: true },
-    cf: { cacheTtl: CACHE_TIME, cacheEverything: true },
+    cf: {
+      minify: { html: true },
+      cacheTtl: CACHE_TIME,
+      cacheEverything: true,
+    },
   })
   const clonedResponse = response.clone()
   const { headers, status, statusText } = response
@@ -207,6 +210,8 @@ function getOptimizer(config) {
       fetch(url, {
         ...init,
         cf: {
+          cacheTtl: CACHE_TIME,
+          cacheEverything: true,
           minify: { html: true },
         },
       }),
