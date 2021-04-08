@@ -4,8 +4,10 @@
   "description": "A Cloudflare Worker AMP Optimizer",
   "main": "./src/index.js",
   "scripts": {
-    "test": "jest --coverage",
-    "format": "prettier --write '{src,test}/*.{js,css,json,md}'"
+    "format": "prettier --write '{src,test}/*.{js,css,json,md}'",
+    "publish": "wrangler publish",
+    "start": "wrangler dev --env=dev",
+    "test": "jest --coverage"
   },
   "jest": {
     "collectCoverageFrom": [
