@@ -28,7 +28,7 @@ beforeEach(() => {
 })
 
 describe('handleRequest', () => {
-  const defaultConfig = { domain: 'example.com' }
+  const defaultConfig = { domain: 'example.com', MODE: 'test' }
 
   function getOutput(url, config = defaultConfig) {
     return handleRequest({ url, method: 'GET' }, config).then(r => r.text())
@@ -50,10 +50,7 @@ describe('handleRequest', () => {
     global.fetch.mockReturnValue(incomingResponse)
     AmpOptimizer.transformHtmlSpy.mockReturnValue(Promise.reject('Fail.'))
 
-    const output = await getOutput('http://text.com', {
-      ...defaultConfig,
-      MODE: 'test',
-    })
+    const output = await getOutput('http://text.com')
     expect(output).toBe(input)
   })
 
