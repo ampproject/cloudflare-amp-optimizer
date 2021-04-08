@@ -5,6 +5,7 @@ workers_dev = true
 route = ""
 zone_id = ""
 webpack_config = "webpack.config.js"
+vars = { MODE = "production" }
 
 [env.dev]
 vars = { MODE = "dev" }
