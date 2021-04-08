@@ -38,8 +38,7 @@ async function handleRequest(request, config = config) {
     return fetch(url.toString())
   }
 
-  // TODO: add cf fetch cache based on cache-control headers of the response.
-  const response = await fetch(url.toString())
+  const response = await fetch(url.toString(), { minify: { html: true } })
   const clonedResponse = response.clone()
   const { headers, status, statusText } = response
 
