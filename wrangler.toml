@@ -7,7 +7,7 @@ zone_id = ""
 webpack_config = "webpack.config.js"
 vars = { MODE = "production" }
 kv_namespaces = [
-  { binding = "KV", id = "471b51eb82a14c4382577ca2b2f06113"},
+  { binding = "KV", id = "471b51eb82a14c4382577ca2b2f06113", preview_id="471b51eb82a14c4382577ca2b2f06113"},
 ]
 
 [env.dev]
@@ -17,5 +17,5 @@ vars = { MODE = "dev" }
 name = "optimizer-beta"
 vars = { MODE = "beta" }
 kv_namespaces = [
-  { binding = "KV", id = "2aa2540e31a8499ebc6cb23bfcde6541"},
+  { binding = "KV", id = "2aa2540e31a8499ebc6cb23bfcde6541", preview_id="2aa2540e31a8499ebc6cb23bfcde6541"},
 ]

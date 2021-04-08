@@ -20,17 +20,17 @@ const ampOptimizer = getOptimizer(config)
 validateConfiguration(config)
 addEventListener('fetch', event => {
   event.passThroughOnException()
-  return event.respondWith(handleRequest(event.request, config))
+  return event.respondWith(handleRequest(event.request, config, event))
 })
 
 /**
  * @param {!Request} request
  * @param {!ConfigDef} config
+ * @param {FetchEvent} event
  * @return {!Request}
  */
-async function handleRequest(request, config = config) {
+async function handleRequest(request, config = config, event) {
   const url = new URL(request.url)
-  //TODO:// We can return immediately if it is not a GET right?
   if (isReverseProxy(config)) {
     url.hostname = config.to
   }
@@ -41,19 +41,16 @@ async function handleRequest(request, config = config) {
     return fetch(request)
   }
 
-  const response = await fetch(url.toString(), { minify: { html: true } })
   if (config.kvCaching) {
     const cached = await KV.get(request.url)
     if (cached) {
-      const { status, statusText, headers, transformed } = JSON.parse(cached)
-      const r = new Response(transformed, { status, statusText, headers })
-      // TODO: is there any way to put the rewritten Response object in KV Store?
-      // it is suboptimal to keep rewriting links and adding the tracker tag.
-      return addTag(maybeRewriteLinks(r, config))
+      // TODO: can we do something faster than JSON.parse?
+      const { status, statusText, headers, text } = JSON.parse(cached)
+      return new Response(text, { status, statusText, headers })
     }
   }
 
-  const response = await fetch(url.toString())
+  const response = await fetch(url.toString(), { minify: { html: true } })
   const clonedResponse = response.clone()
   const { headers, status, statusText } = response
 
@@ -70,33 +67,47 @@ async function handleRequest(request, config = config) {
 
   try {
     const transformed = await ampOptimizer.transformHtml(responseText)
+    const response = new Response(transformed, { headers, statusText, status })
+    const rewritten = addTag(maybeRewriteLinks(response, config))
 
-    //TODO: Need to wrap this in a promise and set it on event.waitUntil()
-    //TODO: Do this in a nextTick()/setTimeout()
-    //TODO: if HTMLRewriting is needed, clone the response, do the rewriting, then response.text() again.
     if (config.kvCaching) {
-      KV.put(
-        request.url,
-        JSON.stringify({
-          transformed,
-          headers: Array.from(headers.entries()),
-          statusText,
-          status,
-        }),
-        {
-          expirationTtl: 60 * 60, //TODO: Match the cache time with the Response.
-        },
-      )
+      event.waitUntil(saveResponse(request.url, rewritten.clone()))
     }
 
-    const r = new Response(transformed, { headers, statusText, status })
-    return addTag(maybeRewriteLinks(r, config))
+    return rewritten
   } catch (err) {
     if (config.MODE !== 'test') {
       console.error(`Failed to optimize: ${url.toString()}, with Error; ${err}`)
     }
     return clonedResponse
   }
+}
+
+/**
+ * @param {string} key
+ * @param {!Response} response
+ * @returns {!Promise}
+ */
+async function storeResponse(key, response) {
+  // Wait a macrotask so that all of this logic occurs after
+  // we've already started streaming the response.
+  await setTimeout(new Promise.resolve(), 0)
+
+  const { headers, status, statusText } = response
+  const text = await response.text()
+
+  return KV.put(
+    key,
+    JSON.stringify({
+      text,
+      headers: Array.from(headers.entries()),
+      statusText,
+      status,
+    }),
+    {
+      expirationTtl: 60 * 60, //TODO: Match the cache time with the Response.
+    },
+  )
 }
 
 /**
