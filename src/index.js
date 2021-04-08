@@ -71,9 +71,8 @@ async function handleRequest(request, config = config, event) {
     const rewritten = addTag(maybeRewriteLinks(response, config))
 
     if (config.kvCaching) {
-      event.waitUntil(saveResponse(request.url, rewritten.clone()))
+      event.waitUntil(storeResponse(request.url, rewritten.clone()))
     }
-
     return rewritten
   } catch (err) {
     if (config.MODE !== 'test') {
@@ -91,10 +90,11 @@ async function handleRequest(request, config = config, event) {
 async function storeResponse(key, response) {
   // Wait a macrotask so that all of this logic occurs after
   // we've already started streaming the response.
-  await setTimeout(new Promise.resolve(), 0)
+  await new Promise(r => setTimeout(r, 0))
 
   const { headers, status, statusText } = response
   const text = await response.text()
+  console.log(`Putting: ${key}, with text: ${status}`)
 
   return KV.put(
     key,
