@@ -18,6 +18,8 @@ const { DocTagger, LinkRewriter } = require('./rewriters')
 const config = /** @type {ConfigDef} */ (require('../config.json'))
 config.MODE = process.env.NODE_ENV === 'test' ? 'test' : MODE
 
+const CACHE_TIME = 60 * 60 // TODO: how should we actually set TTLs?
+
 /**
  * Configuration typedef.
  * @typedef {{
@@ -26,6 +28,7 @@ config.MODE = process.env.NODE_ENV === 'test' ? 'test' : MODE
  *  domain: string,
  *  optimizer: Object,
  *  enableCloudflareImageOptimization: boolean,
+ *  enableKVCache: boolean,
  *  MODE: string,
  * }} ConfigDef
  */
@@ -34,15 +37,16 @@ const ampOptimizer = getOptimizer(config)
 validateConfiguration(config)
 addEventListener('fetch', event => {
   event.passThroughOnException()
-  return event.respondWith(handleRequest(event.request, config))
+  return event.respondWith(handleRequest(event.request, config, event))
 })
 
 /**
  * @param {!Request} request
  * @param {!ConfigDef} config
+ * @param {FetchEvent} event
  * @return {!Request}
  */
-async function handleRequest(request, config = config) {
+async function handleRequest(request, config = config, event) {
   const url = new URL(request.url)
   if (isReverseProxy(config)) {
     url.hostname = config.to
@@ -54,7 +58,22 @@ async function handleRequest(request, config = config) {
     return fetch(request)
   }
 
-  const response = await fetch(url.toString(), { minify: { html: true } })
+  if (config.enableKVCache) {
+    const cached = await KV.get(request.url)
+    if (cached) {
+      // TODO: can we do something faster than JSON.parse?
+      const { status, statusText, headers, text } = JSON.parse(cached)
+      return new Response(text, { status, statusText, headers })
+    }
+  }
+
+  const response = await fetch(url.toString(), {
+    cf: {
+      minify: { html: true },
+      cacheTtl: CACHE_TIME,
+      cacheEverything: true,
+    },
+  })
   const clonedResponse = response.clone()
   const { headers, status, statusText } = response
 
@@ -70,16 +89,48 @@ async function handleRequest(request, config = config) {
   }
 
   try {
-    // TODO: use cache for storing transformed result.
     const transformed = await ampOptimizer.transformHtml(responseText)
-    const r = new Response(transformed, { headers, statusText, status })
-    return addTag(maybeRewriteLinks(r, config))
+    const response = new Response(transformed, { headers, statusText, status })
+    const rewritten = addTag(maybeRewriteLinks(response, config))
+
+    if (config.enableKVCache) {
+      event.waitUntil(storeResponse(request.url, rewritten.clone()))
+    }
+    return rewritten
   } catch (err) {
     if (config.MODE !== 'test') {
       console.error(`Failed to optimize: ${url.toString()}, with Error; ${err}`)
     }
     return clonedResponse
   }
+}
+
+/**
+ * @param {string} key
+ * @param {!Response} response
+ * @returns {!Promise}
+ */
+async function storeResponse(key, response) {
+  // Wait a macrotask so that all of this logic occurs after
+  // we've already started streaming the response.
+  await new Promise(r => setTimeout(r, 0))
+
+  const { headers, status, statusText } = response
+  const text = await response.text()
+  console.log(`Putting: ${key}, with text: ${status}`)
+
+  return KV.put(
+    key,
+    JSON.stringify({
+      text,
+      headers: Array.from(headers.entries()),
+      statusText,
+      status,
+    }),
+    {
+      expirationTtl: CACHE_TIME, //TODO: Match the cache time with the Response.
+    },
+  )
 }
 
 /**
@@ -130,6 +181,7 @@ function validateConfiguration(config) {
     'optimizer',
     'enableCloudflareImageResizing',
     'MODE',
+    'enableKVCache',
   ])
   Object.keys(config).forEach(key => {
     if (!allowed.has(key)) {
@@ -173,8 +225,9 @@ function getOptimizer(config) {
       fetch(url, {
         ...init,
         cf: {
+          cacheTtl: CACHE_TIME,
           cacheEverything: true,
-          cacheTtl: 60 * 60 * 6, // 6 hours
+          minify: { html: true },
         },
       }),
     transformations: AmpOptimizer.TRANSFORMATIONS_MINIMAL,
