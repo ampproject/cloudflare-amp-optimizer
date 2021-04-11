@@ -41,6 +41,7 @@ addEventListener('fetch', event => {
   return event.respondWith(handleRequest(event, config))
 })
 
+// TODO: rename to handleEvent and replace request --> event.
 /**
  * @param {!FetchEvent} event
  * @param {!ConfigDef} config
@@ -60,12 +61,22 @@ async function handleRequest(event, config = config) {
     return fetch(request)
   }
 
+  // First layer caching, local to the datacenter
+  {
+    const cached = await caches.default.match(request)
+    if (cached) {
+      return cached
+    }
+  }
+
   if (config.enableKVCache) {
     const cached = await KV.get(request.url)
     if (cached) {
       // TODO: can we do something faster than JSON.parse?
       const { status, statusText, headers, text } = JSON.parse(cached)
-      return new Response(text, { status, statusText, headers })
+      const response = new Response(text, { status, statusText, headers })
+      event.waitUntil(storeResponseCache(request, response.clone()))
+      return response
     }
   }
 
@@ -89,11 +100,16 @@ async function handleRequest(event, config = config) {
 
   try {
     const transformed = await ampOptimizer.transformHtml(responseText)
-    let response = new Response(transformed, { headers, statusText, status })
+    const response = new Response(transformed, { headers, statusText, status })
     const rewritten = addTag(maybeRewriteLinks(response, config))
 
     if (config.enableKVCache) {
-      event.waitUntil(storeResponse(request.url, rewritten.clone()))
+      event.waitUntil(
+        Promise.all([
+          storeResponseCache(request, rewritten.clone()),
+          storeResponseKV(request.url, rewritten.clone()),
+        ]),
+      )
     }
     return rewritten
   } catch (err) {
@@ -109,7 +125,7 @@ async function handleRequest(event, config = config) {
  * @param {!Response} response
  * @returns {!Promise}
  */
-async function storeResponse(key, response) {
+async function storeResponseKV(key, response) {
   // Wait a macrotask so that all of this logic occurs after
   // we've already started streaming the response.
   await new Promise(r => setTimeout(r, 0))
@@ -244,6 +260,15 @@ function getOptimizer(config) {
       ? imageOptimizer
       : undefined,
   })
+}
+
+/**
+ * @param {string} str
+ * @return {maxAge: number | undefined}
+ */
+function parseCacheControl(str) {
+  const maxAge = str.match(/max-age=(\d+)/)[1]
+  return { maxAge }
 }
 
 module.exports = {
