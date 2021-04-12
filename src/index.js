@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 const config = /** @type {ConfigDef} */ (require('../config.json'))
+const {handleRequest} = require('@ampproject/cloudflare-optimizer-scripts')
 
 addEventListener('fetch', event => {
   return event.respondWith(handleRequest(event, config))
