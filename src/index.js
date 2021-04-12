@@ -188,15 +188,6 @@ function isReverseProxy(config) {
   return !config.domain
 }
 
-/**
- * @param {string} str
- * @return {maxAge: number | undefined}
- */
-function parseCacheControl(str) {
-  const maxAge = str.match(/max-age=(\d+)/)[1]
-  return { maxAge }
-}
-
 /** @param {!ConfigDef} config */
 function validateConfiguration(config) {
   const allowed = new Set([
