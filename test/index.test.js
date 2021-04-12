@@ -46,7 +46,11 @@ describe('handleRequest', () => {
   const defaultConfig = { domain: 'example.com', MODE: 'test' }
 
   function getOutput(url, config = defaultConfig) {
-    return handleRequest({ url, method: 'GET' }, config).then(r => r.text())
+    const event = {
+      request: { url, method: 'GET' },
+      passThroughOnException: jest.fn(),
+    }
+    return handleRequest(event, config).then(r => r.text())
   }
 
   it('Should proxy through non GET requests', async () => {
@@ -55,7 +59,8 @@ describe('handleRequest', () => {
     global.fetch.mockReturnValue(incomingResponse)
 
     const request = { url: 'http://text.com', method: 'POST' }
-    const output = await handleRequest(request, defaultConfig)
+    const event = { request, passThroughOnException: jest.fn() }
+    const output = await handleRequest(event, defaultConfig)
     expect(output).toBe(incomingResponse)
   })
 
@@ -108,6 +113,14 @@ describe('handleRequest', () => {
 
     await getOutput('http://test.com', config)
     expect(fetch).toBeCalledWith('http://test-origin.com/', expect.anything())
+  })
+
+  it('should call enable passThroughOnException', async () => {
+    const request = { url: 'http://text.com' }
+    const event = { request, passThroughOnException: jest.fn() }
+    await handleRequest(event, defaultConfig)
+
+    expect(event.passThroughOnException).toBeCalled()
   })
 })
 

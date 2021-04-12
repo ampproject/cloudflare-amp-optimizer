@@ -18,7 +18,9 @@ const { DocTagger, LinkRewriter } = require('./rewriters')
 const config = /** @type {ConfigDef} */ (require('../config.json'))
 config.MODE = process.env.NODE_ENV === 'test' ? 'test' : MODE
 
-const CACHE_TIME = 60 * 60 // TODO: how should we actually set TTLs?
+// For origins that do not specify cache-control headers,
+// we use a default TTL of 15 minutes.
+const DEFAULT_TTL = 60 * 15
 
 /**
  * Configuration typedef.
@@ -36,17 +38,17 @@ const CACHE_TIME = 60 * 60 // TODO: how should we actually set TTLs?
 const ampOptimizer = getOptimizer(config)
 validateConfiguration(config)
 addEventListener('fetch', event => {
-  event.passThroughOnException()
-  return event.respondWith(handleRequest(event.request, config, event))
+  return event.respondWith(handleRequest(event, config))
 })
 
 /**
- * @param {!Request} request
+ * @param {!FetchEvent} event
  * @param {!ConfigDef} config
- * @param {FetchEvent} event
  * @return {!Request}
  */
-async function handleRequest(request, config = config, event) {
+async function handleRequest(event, config = config) {
+  event.passThroughOnException()
+  const request = event.request
   const url = new URL(request.url)
   if (isReverseProxy(config)) {
     url.hostname = config.to
@@ -68,11 +70,7 @@ async function handleRequest(request, config = config, event) {
   }
 
   const response = await fetch(url.toString(), {
-    cf: {
-      minify: { html: true },
-      cacheTtl: CACHE_TIME,
-      cacheEverything: true,
-    },
+    cf: { minify: { html: true } },
   })
   const clonedResponse = response.clone()
   const { headers, status, statusText } = response
@@ -85,12 +83,13 @@ async function handleRequest(request, config = config, event) {
 
   const responseText = await response.text()
   if (!isAmp(responseText)) {
+    // Note: we do not rewrite URLs for non-AMP. Unclear if we should.
     return clonedResponse
   }
 
   try {
     const transformed = await ampOptimizer.transformHtml(responseText)
-    const response = new Response(transformed, { headers, statusText, status })
+    let response = new Response(transformed, { headers, statusText, status })
     const rewritten = addTag(maybeRewriteLinks(response, config))
 
     if (config.enableKVCache) {
@@ -117,8 +116,9 @@ async function storeResponse(key, response) {
 
   const { headers, status, statusText } = response
   const text = await response.text()
-  console.log(`Putting: ${key}, with text: ${status}`)
 
+  const maxAge = parseCacheControl(headers.get('cache-control')).maxAge
+  const expirationTtl = Number.isFinite(maxAge) ? maxAge : DEFAULT_TTL
   return KV.put(
     key,
     JSON.stringify({
@@ -128,7 +128,7 @@ async function storeResponse(key, response) {
       status,
     }),
     {
-      expirationTtl: CACHE_TIME, //TODO: Match the cache time with the Response.
+      expirationTtl,
     },
   )
 }
@@ -170,6 +170,15 @@ function isAmp(html) {
  */
 function isReverseProxy(config) {
   return !config.domain
+}
+
+/**
+ * @param {string} str
+ * @return {maxAge: number | undefined}
+ */
+function parseCacheControl(str) {
+  const maxAge = str.match(/max-age=(\d+)/)[1]
+  return { maxAge }
 }
 
 /** @param {!ConfigDef} config */
@@ -225,7 +234,7 @@ function getOptimizer(config) {
       fetch(url, {
         ...init,
         cf: {
-          cacheTtl: CACHE_TIME,
+          cacheTtl: 6 * 60 * 60, // 6 hours. Only needed for AmpOptimizer init.
           cacheEverything: true,
           minify: { html: true },
         },
