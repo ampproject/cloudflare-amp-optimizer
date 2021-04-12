@@ -1,8 +1,2 @@
 {
-  "from": "optimizer.ampdev.workers.dev",
-  "to": "amp.dev",
-  "optimizer": {
-    "maxHeroImageCount": 5
-  },
-  "enableKVCache": true
 }

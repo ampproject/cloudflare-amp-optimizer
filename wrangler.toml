@@ -1,25 +1,29 @@
-name = "optimizer"
+name = ""
 type = "webpack"
-account_id = "d23423cc1d5bd44271dba1eeadd89fb7"
+account_id = ""
 workers_dev = true
 route = ""
 zone_id = ""
-webpack_config = "webpack.config.js"
-vars = { MODE = "production" }
+webpack_config = "node_modules/@ampproject/cloudflare-optimizer-scripts/webpack.config.js"
 kv_namespaces = [
-  { binding = "KV", id = "471b51eb82a14c4382577ca2b2f06113", preview_id="2aa2540e31a8499ebc6cb23bfcde6541"},
+  { binding = "KV", id = "", preview_id=""},
 ]
 
 [env.dev]
-name = "optimizer-dev"
 vars = { MODE = "dev" }
 kv_namespaces = [
-  { binding = "KV", id = "a9b60f5037db4a4592e0b9208290384f", preview_id="a9b60f5037db4a4592e0b9208290384f"},
+  { binding = "KV", id = "", preview_id=""},
 ]
 
 [env.beta]
-name = "optimizer-beta"
 vars = { MODE = "beta" }
 kv_namespaces = [
-  { binding = "KV", id = "2aa2540e31a8499ebc6cb23bfcde6541", preview_id="2aa2540e31a8499ebc6cb23bfcde6541"},
+  { binding = "KV", id = "", preview_id=""},
 ]
+
+[env.prod]
+vars = { MODE = "prod" }
+kv_namespaces = [
+  { binding = "KV", id = "", preview_id=""},
+]
+

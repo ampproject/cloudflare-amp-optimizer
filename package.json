@@ -5,22 +5,14 @@
   "main": "./src/index.js",
   "scripts": {
     "beta": "wrangler publish --env=beta",
-    "coverage": "jest --coverage && open coverage/lcov-report/index.html",
     "format": "prettier --write '{src,test}/*.{js,css,json,md}'",
     "publish": "wrangler publish",
-    "start": "wrangler dev --env=dev",
-    "test": "jest"
+    "start": "wrangler dev --env=dev"
   },
-  "jest": {
-    "collectCoverageFrom": [
-      "src/*.js"
-    ]
-  },
-  "author": "Jake Fried <samouri@users.noreply.github.com>",
-  "license": "MIT",
+  "author": "AMPHTML Team",
+  "license": "Apache-2.0",
   "devDependencies": {
-    "@ampproject/toolbox-optimizer": "2.8.0-canary.16",
-    "jest": "^26.6.3",
+    "@ampproject/cloudflare-optimizer-scripts": "0.0.3",
     "prettier": "1.18.2"
   }
 }
