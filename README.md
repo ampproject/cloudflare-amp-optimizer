@@ -30,14 +30,14 @@ If your origin is not CF backed, then you can only use the cloudflare optimizer 
 
 ```js
 module.export = {
-  from: 'YOUR_WORKER_DOMAIN', // Provide the domain name that your cloudflare worker is deployed.
-  to: 'YOUR_SERVER_IP', // Provide the URL of the origin to proxy to.
+  from: 'YOUR_WORKER_DOMAIN', // Provide the domain name that your cloudflare worker is deployed at.
+  to: 'YOUR_ORIGIN_DOMAIN', // Provide the URL of the origin to proxy to.
 }
 ```
 
 ### Enabling image optimization
 
-If you are a Business or Enterprise customer of Cloudflare, you may enable [Cloudflare Image Optimizations](https://developers.cloudflare.com/images/url-format). Just add `enableCloudflareImageOptimization: true` to the `config.json` file and images will automatically resized and optimized for multiple surfaces.
+If you are a Business or Enterprise customer of Cloudflare, you may enable [Cloudflare Image Optimizations](https://developers.cloudflare.com/images/url-format). Just add `enableCloudflareImageOptimization: true` to the `config.json` file and images will be automatically optimized for multiple screen sizes.
 
 ### Passing configuration options to AMP Optimizer
 

@@ -4,15 +4,14 @@
   "description": "A Cloudflare Worker AMP Optimizer",
   "main": "./src/index.js",
   "scripts": {
+    "start": "wrangler dev --env=dev",
     "beta": "wrangler publish --env=beta",
-    "format": "prettier --write '{src,test}/*.{js,css,json,md}'",
-    "publish": "wrangler publish",
-    "start": "wrangler dev --env=dev"
+    "prod": "wrangler publish"
   },
   "author": "AMPHTML Team",
   "license": "Apache-2.0",
   "devDependencies": {
-    "@ampproject/cloudflare-optimizer-scripts": "0.0.3",
+    "@ampproject/cloudflare-optimizer-scripts": "0.0.4",
     "prettier": "1.18.2"
   }
 }
