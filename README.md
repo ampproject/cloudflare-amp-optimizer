@@ -1,5 +1,7 @@
 # Cloudflare AMP Optimizer
 
+The Cloudflare AMP Optimizer is a Cloudflare Worker that will automatically optimize and cache any AMP pages & content from your origin so everyone can get the benefit of AMP optimized pages, not just users going through the AMP Cache.
+
 See it in action at our [live demo](https://optimizer-demo.ampdev.workers.dev/the_scenic/templates/template_1_article.amp.html).
 
 ## Usage
@@ -11,11 +13,14 @@ npx wrangler generate my-worker  https://github.com/ampproject/cloudflare-optimi
 ```
 
 2. Configure the routes in `wrangler.toml`.
-3. Publish!
+3. Make any changes to `config.json` if needed (explanations below).
+4. Publish!
 
 ```bash
 npm run prod # calls wrangler publish --env=prod
 ```
+
+## Configuration
 
 ### Usage as a reverse proxy
 
