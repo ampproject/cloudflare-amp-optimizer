@@ -1,7 +1,5 @@
 # Cloudflare AMP Optimizer
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/ampproject/cloudflare-optimizer)
-
 See it in action at our [live demo](https://optimizer-demo.ampdev.workers.dev/the_scenic/templates/template_1_article.amp.html).
 
 ## Usage
