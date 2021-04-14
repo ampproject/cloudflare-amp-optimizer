@@ -9,7 +9,7 @@ See it in action at our [live demo](https://optimizer-demo.ampdev.workers.dev/th
 1. Create your own Cloudflare Worker Repo using this as a template.
 
 ```bash
-npx wrangler generate my-worker  https://github.com/ampproject/cloudflare-optimizer
+npx @cloudflare/wrangler generate my-worker  https://github.com/ampproject/cloudflare-optimizer
 ```
 
 2. Configure the routes in `wrangler.toml`.
