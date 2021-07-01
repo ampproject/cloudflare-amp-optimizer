@@ -6,11 +6,11 @@
   "scripts": {
     "start": "wrangler dev --env=dev",
     "beta": "wrangler publish --env=beta",
-    "prod": "wrangler publish"
+    "prod": "wrangler publish --env=prod"
   },
   "author": "AMPHTML Team",
   "license": "Apache-2.0",
   "dependencies": {
-    "@ampproject/cloudflare-optimizer-scripts": "0.0.6"
+    "@ampproject/cloudflare-optimizer-scripts": "2.8.1"
   }
 }
